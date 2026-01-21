@@ -1,0 +1,53 @@
+# Supply Chain Optimizer - Dependencies
+# Python 3.11+ required
+
+# Core AI Framework
+langchain>=0.3.0
+langchain-openai>=0.3.0
+langchain-anthropic>=0.3.0
+langgraph>=0.2.0
+
+# Vector Store
+chromadb>=0.4.0
+# qdrant-client>=1.7.0  # Uncomment for production
+
+# Web Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.10.0
+pydantic-settings>=2.7.0
+
+# Database
+sqlalchemy>=2.0.0
+asyncpg>=0.30.0
+# timescaledb  # Requires PostgreSQL extension
+
+# HTTP & APIs
+httpx>=0.28.0
+aiohttp>=3.11.0
+
+# Data Processing & Forecasting
+pandas>=2.2.0
+numpy>=2.0.0
+prophet>=1.1.0
+scikit-learn>=1.5.0
+scipy>=1.14.0
+
+# Utilities
+python-dotenv>=1.0.0
+tenacity>=9.0.0
+structlog>=24.0.0
+
+# IoT & Messaging (optional)
+# paho-mqtt>=2.0.0
+# aiomqtt>=2.0.0
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+pytest-cov>=6.0.0
+
+# Development
+black>=24.0.0
+ruff>=0.8.0
+mypy>=1.13.0
