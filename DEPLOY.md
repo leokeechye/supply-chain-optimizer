@@ -63,7 +63,10 @@ follow the CNAME instructions.
 
 - **502 / "service not available"**: the app likely bound the wrong port.
   Confirm the start command (Railway → Settings → Deploy) is *not* overriding
-  the Dockerfile `CMD` with a hardcoded port.
+  the Dockerfile `CMD` with a hardcoded port. **Do not add `startCommand` to
+  `railway.json`** — Railway runs it in exec form (no shell), so `$PORT`
+  passes through to uvicorn as a literal string and the process crashes
+  immediately. Let the Dockerfile `CMD` (which uses `sh -c`) handle binding.
 - **`/docs` returns 404**: `DEBUG` is unset or `false`. Set `DEBUG=true`.
 - **LLM calls return canned defaults**: the Anthropic key is missing or wrong.
   Check Deploy Logs for a `WARNING ... Decision generation failed` line — the
