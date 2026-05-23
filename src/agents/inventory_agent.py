@@ -12,7 +12,7 @@ from src.api.schemas import (
     ReorderRecommendation,
     TransferRecommendation,
 )
-from src.data.sample_data import get_inventory_data, get_warehouse_data, SAMPLE_SKUS
+from src.data.sample_data import get_inventory_data, get_warehouse_data, get_skus
 
 
 class InventoryManagementAgent(BaseAgent):
@@ -344,7 +344,7 @@ What is your recommendation?"""),
 
     def _get_sku_name(self, sku: str) -> str:
         """Get human-readable SKU name."""
-        for item in SAMPLE_SKUS:
+        for item in get_skus():
             if item["sku"] == sku:
                 return item["name"]
         return sku

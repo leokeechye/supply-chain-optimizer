@@ -8,6 +8,7 @@ caused a circular import when src.agents.orchestrator was imported directly.
 from fastapi import APIRouter
 
 from src.api.routes import (
+    data,
     forecast,
     inventory,
     logistics,
@@ -24,3 +25,4 @@ router.include_router(logistics.router, prefix="/logistics", tags=["Logistics & 
 router.include_router(risk.router, prefix="/risk", tags=["Risk Analysis"])
 router.include_router(vendors.router, prefix="/vendors", tags=["Vendor Management"])
 router.include_router(orchestrate.router, prefix="/orchestrate", tags=["Multi-Agent Orchestrator"])
+router.include_router(data.router, prefix="/data", tags=["Data Upload"])

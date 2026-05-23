@@ -1,7 +1,17 @@
-"""Supply Chain Optimizer - Sample Data for Development."""
+"""Supply Chain Optimizer - Sample Data for Development.
+
+Every accessor in this module checks src/data/store.py first; if an override
+has been uploaded via POST /api/v1/data/upload/{entity}, the override is
+returned instead of the hardcoded defaults below.
+
+Direct `SAMPLE_SKUS` imports still work but bypass overrides (they're
+captured at import time). Prefer `get_skus()` in new code.
+"""
 
 from datetime import date, datetime, timedelta
 import random
+
+from src.data import store
 
 # ============================================================================
 # SKU Data
@@ -21,12 +31,21 @@ SAMPLE_SKUS = [
 ]
 
 
+def get_skus() -> list[dict]:
+    """SKU catalog. Returns uploaded override if set, else SAMPLE_SKUS."""
+    o = store.get_override("skus")
+    return o if o is not None else SAMPLE_SKUS
+
+
 # ============================================================================
 # Warehouse Data
 # ============================================================================
 
 def get_warehouse_data() -> list[dict]:
-    """Get warehouse information."""
+    """Get warehouse information. Returns uploaded override if set."""
+    o = store.get_override("warehouses")
+    if o is not None:
+        return o
     return [
         {
             "id": "WH-US-EAST",
@@ -68,11 +87,14 @@ def get_warehouse_data() -> list[dict]:
 # ============================================================================
 
 def get_inventory_data() -> list[dict]:
-    """Get current inventory levels."""
+    """Get current inventory levels. Returns uploaded override if set."""
+    o = store.get_override("inventory")
+    if o is not None:
+        return o
     warehouses = ["WH-US-EAST", "WH-US-WEST", "WH-EU-CENTRAL", "WH-ASIA-PACIFIC"]
     inventory = []
-    
-    for sku_info in SAMPLE_SKUS:
+
+    for sku_info in get_skus():
         sku = sku_info["sku"]
         for wh in warehouses:
             # Generate somewhat realistic inventory levels
@@ -102,7 +124,10 @@ def get_inventory_data() -> list[dict]:
 # ============================================================================
 
 def get_historical_sales(sku: str, days: int = 365) -> list[dict]:
-    """Generate historical sales data for an SKU."""
+    """Get historical sales for an SKU. Returns uploaded override if set."""
+    o = store.get_sales_override(sku)
+    if o is not None:
+        return o
     sales = []
     base_date = date.today() - timedelta(days=days)
     
@@ -278,7 +303,10 @@ def get_shipment_data() -> list[dict]:
 # ============================================================================
 
 def get_vendor_data() -> list[dict]:
-    """Get vendor information."""
+    """Get vendor information. Returns uploaded override if set."""
+    o = store.get_override("vendors")
+    if o is not None:
+        return o
     return [
         {
             "id": "VENDOR-001",

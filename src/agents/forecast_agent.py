@@ -262,8 +262,8 @@ Provide your analysis:"""),
 
     def _get_sku_name(self, sku: str) -> str:
         """Get human-readable SKU name."""
-        from src.data.sample_data import SAMPLE_SKUS
-        for item in SAMPLE_SKUS:
+        from src.data.sample_data import get_skus
+        for item in get_skus():
             if item["sku"] == sku:
                 return item["name"]
         return sku
