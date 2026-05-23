@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Supply Chain Orchestrator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #151922;
+    --panel-2: #1c2230;
+    --border: #2a3142;
+    --text: #e6e8ef;
+    --muted: #8a93a6;
+    --accent: #5b9dff;
+    --good: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --crit: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+  header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  main {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 20px;
+    padding: 20px 24px;
+    min-height: calc(100vh - 60px);
+  }
+  .col { display: flex; flex-direction: column; gap: 16px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .panel h2 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  input, select {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: inherit;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  .sku-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px 12px;
+    margin-top: 4px;
+  }
+  .sku-grid label {
+    display: flex; align-items: center; gap: 6px;
+    margin: 0; padding: 4px 0; color: var(--text); font-size: 13px;
+    cursor: pointer;
+  }
+  .sku-grid input[type=checkbox] { width: auto; margin: 0; }
+  button {
+    width: 100%;
+    margin-top: 14px;
+    padding: 10px;
+    background: var(--accent);
+    color: #0a0c10;
+    border: 0;
+    border-radius: 6px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button:hover:not(:disabled) { filter: brightness(1.1); }
+
+  .meta {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    font-size: 12px; color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .meta .pill {
+    padding: 2px 8px; border-radius: 999px; background: var(--panel-2);
+    border: 1px solid var(--border);
+  }
+  .meta .pill.good { color: var(--good); border-color: rgba(74,222,128,0.3); }
+  .meta .pill.bad  { color: var(--bad);  border-color: rgba(248,113,113,0.3); }
+
+  .decision-body { padding: 4px; }
+  .decision-body h1, .decision-body h2, .decision-body h3 { margin-top: 1.2em; }
+  .decision-body h1 { font-size: 20px; }
+  .decision-body h2 { font-size: 16px; color: var(--accent); }
+  .decision-body h3 { font-size: 14px; }
+  .decision-body table {
+    border-collapse: collapse; margin: 10px 0;
+    width: 100%;
+  }
+  .decision-body th, .decision-body td {
+    border: 1px solid var(--border);
+    padding: 6px 10px; text-align: left;
+  }
+  .decision-body th { background: var(--panel-2); }
+  .decision-body code {
+    background: var(--panel-2); padding: 1px 5px; border-radius: 3px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+  }
+  .decision-body pre {
+    background: var(--panel-2); padding: 12px; border-radius: 6px;
+    overflow-x: auto; font-size: 12px;
+    border: 1px solid var(--border);
+  }
+  .decision-body blockquote {
+    border-left: 3px solid var(--accent);
+    margin: 10px 0; padding: 4px 14px;
+    color: var(--muted); background: rgba(91,157,255,0.05);
+  }
+
+  .agent-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .agent-card .name {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px;
+  }
+  .agent-card .row {
+    display: flex; justify-content: space-between; gap: 8px;
+    padding: 2px 0; font-size: 13px;
+  }
+  .agent-card .row .k { color: var(--muted); }
+  .agent-card .row .v { color: var(--text); text-align: right; font-variant-numeric: tabular-nums; }
+
+  .actions-list .action-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; margin: 2px 4px 2px 0;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 999px; font-size: 12px;
+  }
+  .action-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+  .action-pill.high .dot { background: var(--bad); }
+  .action-pill.medium .dot { background: var(--warn); }
+
+  .empty {
+    color: var(--muted); font-style: italic; padding: 40px 0; text-align: center;
+  }
+  .error-box {
+    background: rgba(239,68,68,0.1); border: 1px solid var(--crit);
+    color: var(--bad); padding: 12px; border-radius: 6px;
+  }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Supply Chain Orchestrator</h1>
+  <span class="sub">POST /api/v1/orchestrate/disruption — rendered view</span>
+</header>
+<main>
+  <!-- LEFT: form + agent outputs -->
+  <section class="col">
+    <div class="panel">
+      <h2>Run Disruption</h2>
+      <form id="run-form">
+        <label for="disruption_type">Disruption type</label>
+        <select id="disruption_type" name="disruption_type">
+          <option value="port_congestion">port_congestion</option>
+          <option value="weather">weather</option>
+          <option value="strike">strike</option>
+          <option value="supplier_issue">supplier_issue</option>
+        </select>
+
+        <label for="severity">Severity</label>
+        <select id="severity" name="severity">
+          <option value="low">low</option>
+          <option value="medium" selected>medium</option>
+          <option value="high">high</option>
+          <option value="critical">critical</option>
+        </select>
+
+        <label>Affected SKUs</label>
+        <div class="sku-grid" id="sku-grid"></div>
+
+        <button id="submit-btn" type="submit">Run Workflow</button>
+      </form>
+    </div>
+
+    <div class="panel" id="agent-panel" style="display:none">
+      <h2>Agent Trace</h2>
+      <div id="agent-cards"></div>
+    </div>
+
+    <div class="panel" id="actions-panel" style="display:none">
+      <h2>Extracted Actions</h2>
+      <div class="actions-list" id="actions-list"></div>
+    </div>
+  </section>
+
+  <!-- RIGHT: decision -->
+  <section class="col">
+    <div class="panel" style="flex:1">
+      <div class="meta" id="meta"></div>
+      <div id="result-area">
+        <div class="empty">Submit a disruption to see the orchestrator's decision.</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  // Build SKU checkbox grid (sample data SKU-001..SKU-010)
+  const skuGrid = document.getElementById("sku-grid");
+  for (let i = 1; i <= 10; i++) {
+    const id = `SKU-${String(i).padStart(3, "0")}`;
+    const wrap = document.createElement("label");
+    wrap.innerHTML = `<input type="checkbox" value="${id}" ${i <= 2 ? "checked" : ""}> ${id}`;
+    skuGrid.appendChild(wrap);
+  }
+
+  const form = document.getElementById("run-form");
+  const btn = document.getElementById("submit-btn");
+  const meta = document.getElementById("meta");
+  const result = document.getElementById("result-area");
+  const agentPanel = document.getElementById("agent-panel");
+  const agentCards = document.getElementById("agent-cards");
+  const actionsPanel = document.getElementById("actions-panel");
+  const actionsList = document.getElementById("actions-list");
+
+  function fmtDuration(startISO, endISO) {
+    if (!startISO || !endISO) return null;
+    const ms = new Date(endISO) - new Date(startISO);
+    return `${(ms / 1000).toFixed(1)}s`;
+  }
+
+  function renderMeta(data, startedAt) {
+    const dur = fmtDuration(startedAt, data.completed_at);
+    const statusClass = data.status === "completed" ? "good" : "bad";
+    meta.innerHTML = `
+      <span class="pill">${data.workflow_id || "—"}</span>
+      <span class="pill">${data.task_type || "—"}</span>
+      <span class="pill ${statusClass}">${data.status || "—"}</span>
+      ${dur ? `<span class="pill">${dur}</span>` : ""}
+    `;
+  }
+
+  function renderAgents(outputs) {
+    agentCards.innerHTML = "";
+    const order = ["situation", "forecast", "inventory", "risk", "logistics", "vendors"];
+    for (const name of order) {
+      const v = outputs[name];
+      if (!v) continue;
+      const card = document.createElement("div");
+      card.className = "agent-card";
+      let rows = "";
+      const summarize = (val) => {
+        if (val === null || val === undefined) return "—";
+        if (Array.isArray(val)) return val.length ? `${val.length} item${val.length > 1 ? "s" : ""}` : "[]";
+        if (typeof val === "object") return JSON.stringify(val).slice(0, 80);
+        if (typeof val === "number") return val.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        const s = String(val);
+        return s.length > 80 ? s.slice(0, 77) + "…" : s;
+      };
+      for (const [k, vv] of Object.entries(v)) {
+        rows += `<div class="row"><span class="k">${k}</span><span class="v">${summarize(vv)}</span></div>`;
+      }
+      card.innerHTML = `<div class="name">${name}</div>${rows}`;
+      agentCards.appendChild(card);
+    }
+    agentPanel.style.display = "block";
+  }
+
+  function renderActions(actions) {
+    actionsList.innerHTML = "";
+    if (!actions || actions.length === 0) { actionsPanel.style.display = "none"; return; }
+    for (const a of actions) {
+      const pill = document.createElement("span");
+      pill.className = `action-pill ${a.priority || ""}`;
+      pill.innerHTML = `<span class="dot"></span>${a.action} <span style="color:var(--muted)">· ${a.priority || ""}</span>`;
+      actionsList.appendChild(pill);
+    }
+    actionsPanel.style.display = "block";
+  }
+
+  function renderDecision(decisionMd) {
+    if (!decisionMd) {
+      result.innerHTML = `<div class="empty">No decision returned.</div>`;
+      return;
+    }
+    result.innerHTML = `<div class="decision-body">${marked.parse(decisionMd)}</div>`;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const checked = [...document.querySelectorAll("#sku-grid input:checked")].map(c => c.value);
+    if (checked.length === 0) {
+      alert("Select at least one SKU.");
+      return;
+    }
+    const body = {
+      disruption_type: document.getElementById("disruption_type").value,
+      severity: document.getElementById("severity").value,
+      affected_items: checked,
+    };
+
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> Running… (30–60s)`;
+    meta.innerHTML = "";
+    agentPanel.style.display = "none";
+    actionsPanel.style.display = "none";
+    result.innerHTML = `<div class="empty"><span class="spinner"></span> Orchestrator running…</div>`;
+
+    const startedAt = new Date().toISOString();
+    try {
+      const r = await fetch("/api/v1/orchestrate/disruption", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+      renderMeta(data, startedAt);
+      renderDecision(data.decision);
+      renderAgents(data.agent_outputs || {});
+      renderActions(data.actions || []);
+    } catch (err) {
+      result.innerHTML = `<div class="error-box">Error: ${err.message}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Run Workflow";
+    }
+  });
+</script>
+</body>
+</html>

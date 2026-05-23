@@ -1,7 +1,7 @@
 """Supply Chain Optimizer - Orchestrator Agent."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, TypedDict
 import uuid
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -18,9 +18,19 @@ from src.agents.vendor_agent import VendorCoordinationAgent
 from src.agents.risk_agent import RiskAnalystAgent
 
 
-class AgentState(dict):
-    """State passed between agents in the workflow."""
-    pass
+class AgentState(TypedDict, total=False):
+    """State passed between agents in the workflow.
+
+    LangGraph uses this schema to know which keys to propagate between nodes;
+    a bare `dict` subclass silently dropped fields, causing KeyError in nodes.
+    """
+    task_type: str
+    parameters: dict
+    agent_outputs: dict
+    decision: str | None
+    actions: list
+    workflow_id: str
+    started_at: str
 
 
 class SupplyChainOrchestrator(BaseAgent):
@@ -123,7 +133,7 @@ What is your decision and reasoning?"""),
         self.logger.info("Running orchestrated workflow", task_type=task_type)
         
         # Initialize state
-        initial_state = AgentState({
+        initial_state: AgentState = {
             "task_type": task_type,
             "parameters": parameters or {},
             "agent_outputs": {},
@@ -131,7 +141,7 @@ What is your decision and reasoning?"""),
             "actions": [],
             "workflow_id": f"WF-{uuid.uuid4().hex[:8].upper()}",
             "started_at": datetime.utcnow().isoformat(),
-        })
+        }
         
         try:
             final_state = await self.workflow.ainvoke(initial_state)

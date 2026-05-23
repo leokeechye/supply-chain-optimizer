@@ -342,3 +342,37 @@ class WorkflowStatus(BaseModel):
     started_at: datetime
     completed_at: datetime | None = None
     final_decision: str | None = None
+
+
+class DisruptionRequest(BaseModel):
+    """Request to run the orchestrator's disruption-response workflow."""
+    disruption_type: str = Field(
+        ...,
+        description="e.g. 'port_congestion', 'weather', 'strike', 'supplier_issue'",
+    )
+    affected_items: list[str] = Field(
+        default_factory=list,
+        description="SKU IDs impacted by the disruption",
+    )
+    severity: RiskSeverity = Field(default=RiskSeverity.MEDIUM)
+
+
+class OrchestrationRequest(BaseModel):
+    """Generic orchestrator invocation with task_type + parameters."""
+    task_type: str = Field(
+        ...,
+        description="'reorder', 'reroute', or 'disruption_response'",
+    )
+    parameters: dict = Field(default_factory=dict)
+
+
+class OrchestrationResponse(BaseModel):
+    """Result of an orchestrator workflow run."""
+    workflow_id: str
+    task_type: str
+    status: str  # completed, failed
+    decision: str | None = None
+    actions: list[dict] = Field(default_factory=list)
+    agent_outputs: dict = Field(default_factory=dict)
+    completed_at: str | None = None
+    error: str | None = None

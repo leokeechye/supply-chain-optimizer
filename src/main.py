@@ -3,11 +3,15 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+from pathlib import Path
+
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
-from src.api import router as api_router
+from src.api.router import router as api_router
 from src.config import get_settings
 
 # Configure structured logging
@@ -77,6 +81,15 @@ def create_app() -> FastAPI:
 
     # Include API routes
     app.include_router(api_router, prefix="/api/v1")
+
+    # Mount static UI (rendered-markdown orchestrator view)
+    static_dir = Path(__file__).parent / "static"
+    if static_dir.is_dir():
+        app.mount("/ui", StaticFiles(directory=str(static_dir)), name="ui")
+
+        @app.get("/orchestrate", include_in_schema=False)
+        async def orchestrate_ui_shortcut() -> RedirectResponse:
+            return RedirectResponse(url="/ui/orchestrate.html")
 
     @app.get("/health")
     async def health_check() -> dict:

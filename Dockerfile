@@ -18,12 +18,13 @@ COPY . .
 # Create data directories
 RUN mkdir -p /app/data/chroma /app/logs
 
-# Expose port
+# Expose default port (Railway/Cloud Run inject $PORT and route to whatever the
+# process binds to; EXPOSE is informational only).
 EXPOSE 8000
 
-# Health check
+# Health check — uses $PORT when set (Railway), else 8000 (local docker run).
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Run the application
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use sh -c so $PORT is expanded at runtime, not baked at build.
+CMD ["sh", "-c", "uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

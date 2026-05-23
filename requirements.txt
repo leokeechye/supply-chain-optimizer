@@ -29,7 +29,9 @@ aiohttp>=3.11.0
 # Data Processing & Forecasting
 pandas>=2.2.0
 numpy>=2.0.0
-prophet>=1.1.0
+# prophet>=1.1.0  # Declared by the README but unused — forecast_agent uses
+#                 # numpy.polyfit. Re-enable if you wire real Prophet forecasts;
+#                 # note it compiles Stan from source (~8-10 min on first build).
 scikit-learn>=1.5.0
 scipy>=1.14.0
 
