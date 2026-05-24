@@ -1,17 +1,21 @@
-"""Supply Chain Optimizer - Sample Data for Development.
+"""Supply Chain Optimizer - Data accessors.
 
-Every accessor in this module checks src/data/store.py first; if an override
-has been uploaded via POST /api/v1/data/upload/{entity}, the override is
-returned instead of the hardcoded defaults below.
+For the five entities backed by SQLite (skus, warehouses, inventory,
+sales_history, vendors), the accessors here delegate to src/data/db.py.
+Uploading a CSV via POST /api/v1/data/upload/{entity} writes through to
+the database, so changes survive restarts (with a mounted volume on Railway).
 
-Direct `SAMPLE_SKUS` imports still work but bypass overrides (they're
-captured at import time). Prefer `get_skus()` in new code.
+For the remaining entities that aren't user-supplied (carriers, shipments,
+orders, risks) the hardcoded sample data below is returned as-is.
+
+The `SAMPLE_SKUS` constant is preserved as a static snapshot for any code
+that imported it directly; prefer `get_skus()` to see the live DB state.
 """
 
 from datetime import date, datetime, timedelta
 import random
 
-from src.data import store
+from src.data import db
 
 # ============================================================================
 # SKU Data
@@ -32,9 +36,8 @@ SAMPLE_SKUS = [
 
 
 def get_skus() -> list[dict]:
-    """SKU catalog. Returns uploaded override if set, else SAMPLE_SKUS."""
-    o = store.get_override("skus")
-    return o if o is not None else SAMPLE_SKUS
+    """SKU catalog from SQLite (seeded from src/data/csv/skus.csv on first boot)."""
+    return db.list_skus()
 
 
 # ============================================================================
@@ -42,44 +45,8 @@ def get_skus() -> list[dict]:
 # ============================================================================
 
 def get_warehouse_data() -> list[dict]:
-    """Get warehouse information. Returns uploaded override if set."""
-    o = store.get_override("warehouses")
-    if o is not None:
-        return o
-    return [
-        {
-            "id": "WH-US-EAST",
-            "name": "East Coast Distribution Center",
-            "location": "Newark, NJ, USA",
-            "capacity_sqm": 50000,
-            "used_sqm": 42000,
-            "region": "us-east",
-        },
-        {
-            "id": "WH-US-WEST",
-            "name": "West Coast Distribution Center",
-            "location": "Los Angeles, CA, USA",
-            "capacity_sqm": 45000,
-            "used_sqm": 38500,
-            "region": "us-west",
-        },
-        {
-            "id": "WH-EU-CENTRAL",
-            "name": "Central Europe Hub",
-            "location": "Rotterdam, Netherlands",
-            "capacity_sqm": 35000,
-            "used_sqm": 28000,
-            "region": "eu-central",
-        },
-        {
-            "id": "WH-ASIA-PACIFIC",
-            "name": "Asia Pacific Hub",
-            "location": "Singapore",
-            "capacity_sqm": 40000,
-            "used_sqm": 36000,
-            "region": "apac",
-        },
-    ]
+    """Warehouses from SQLite."""
+    return db.list_warehouses()
 
 
 # ============================================================================
@@ -87,36 +54,8 @@ def get_warehouse_data() -> list[dict]:
 # ============================================================================
 
 def get_inventory_data() -> list[dict]:
-    """Get current inventory levels. Returns uploaded override if set."""
-    o = store.get_override("inventory")
-    if o is not None:
-        return o
-    warehouses = ["WH-US-EAST", "WH-US-WEST", "WH-EU-CENTRAL", "WH-ASIA-PACIFIC"]
-    inventory = []
-
-    for sku_info in get_skus():
-        sku = sku_info["sku"]
-        for wh in warehouses:
-            # Generate somewhat realistic inventory levels
-            base_stock = random.randint(50, 500)
-            reorder_point = random.randint(100, 200)
-            safety_stock = reorder_point // 2
-            
-            inventory.append({
-                "sku": sku,
-                "warehouse_id": wh,
-                "current_stock": base_stock,
-                "reserved_stock": random.randint(0, base_stock // 5),
-                "reorder_point": reorder_point,
-                "safety_stock": safety_stock,
-                "lead_time_days": random.randint(7, 21),
-                "unit_cost": round(random.uniform(10, 500), 2),
-                "avg_daily_demand": random.randint(5, 25),
-                "days_since_last_sale": random.randint(0, 30),
-                "primary_vendor": f"VENDOR-{random.randint(1, 5):03d}",
-            })
-    
-    return inventory
+    """Current inventory from SQLite. Stable across calls (unlike the old random version)."""
+    return db.list_inventory()
 
 
 # ============================================================================
@@ -124,48 +63,8 @@ def get_inventory_data() -> list[dict]:
 # ============================================================================
 
 def get_historical_sales(sku: str, days: int = 365) -> list[dict]:
-    """Get historical sales for an SKU. Returns uploaded override if set."""
-    o = store.get_sales_override(sku)
-    if o is not None:
-        return o
-    sales = []
-    base_date = date.today() - timedelta(days=days)
-    
-    # Base demand with some noise
-    base_demand = random.randint(50, 150)
-    
-    for i in range(days):
-        sale_date = base_date + timedelta(days=i)
-        
-        # Add seasonality (higher in Q4)
-        month = sale_date.month
-        seasonal_factor = 1.0
-        if month in [10, 11, 12]:
-            seasonal_factor = 1.3
-        elif month in [1, 2]:
-            seasonal_factor = 0.8
-        
-        # Add day-of-week effect
-        dow = sale_date.weekday()
-        dow_factor = 0.6 if dow >= 5 else 1.0  # Lower on weekends
-        
-        # Add trend
-        trend_factor = 1 + (i / days) * 0.1  # 10% growth over the year
-        
-        # Calculate quantity with noise
-        quantity = int(
-            base_demand * seasonal_factor * dow_factor * trend_factor
-            + random.gauss(0, base_demand * 0.2)
-        )
-        quantity = max(0, quantity)
-        
-        sales.append({
-            "date": sale_date.isoformat(),
-            "sku": sku,
-            "quantity": quantity,
-        })
-    
-    return sales
+    """Historical sales for an SKU from SQLite (deterministic seed at first boot)."""
+    return db.list_sales_for_sku(sku)
 
 
 # ============================================================================
@@ -303,10 +202,12 @@ def get_shipment_data() -> list[dict]:
 # ============================================================================
 
 def get_vendor_data() -> list[dict]:
-    """Get vendor information. Returns uploaded override if set."""
-    o = store.get_override("vendors")
-    if o is not None:
-        return o
+    """Vendors from SQLite."""
+    return db.list_vendors()
+
+
+def _legacy_vendor_data() -> list[dict]:
+    """Hardcoded vendor list kept only for reference / fallback diagnostics."""
     return [
         {
             "id": "VENDOR-001",

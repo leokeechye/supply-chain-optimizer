@@ -41,9 +41,15 @@ It's reachable over HTTP via `POST /api/v1/orchestrate/disruption` and `POST /ap
 
 `AgentState` in `orchestrator.py` is a `TypedDict` — LangGraph relies on the declared fields to propagate state between nodes. A bare `dict`/`dict`-subclass silently drops keys and the first node hits `KeyError`. Keep it a TypedDict and add fields explicitly when extending.
 
-### Data layer is mocked
+### Data layer
 
-Despite the README's "SAP/Oracle/IoT/EasyPost" architecture diagram, all agent inputs come from `src/data/sample_data.py` (in-memory SKUs, warehouses, vendors, randomly-generated historical sales). There is no database connection, no `aiosqlite` setup, no real carrier integrations. `prophet` is in `requirements.txt` but unused — `DemandForecastingAgent` does forecasting with `numpy.polyfit` + standard-deviation bands, not Prophet. Treat the sample-data module as the substitution point when wiring real data.
+Five entities are now **SQLite-backed** (`src/data/db.py`, stdlib `sqlite3`): `skus`, `warehouses`, `inventory`, `sales_history`, `vendors`. On startup `init_db()` (called from the `src/main.py` lifespan hook) creates the schema and, if empty, seeds from `src/data/csv/*.csv` — plus one deterministic year of sales history (seeded `random`, so it's reproducible). The accessors in `src/data/sample_data.py` (`get_skus`, `get_warehouse_data`, `get_inventory_data`, `get_historical_sales`, `get_vendor_data`) delegate to `db.py`. CSV uploads via `/api/v1/data/upload/{entity}` write through to the DB (`db.replace_*`).
+
+The DB file is `./data/supply_chain.db` (override with `SQLITE_PATH`). On Railway it needs a Volume mounted at `/app/data` to survive redeploys — see `DEPLOY.md` §4b.
+
+Still hardcoded in `sample_data.py` (not user-supplied, not DB-backed): `get_carrier_data`, `get_shipment_data`, `get_order_data`, `get_risk_data`. The 4 "active risks" the risk agent returns are hardcoded here, not detected from any real feed.
+
+`prophet` is commented out in `requirements.txt` — `DemandForecastingAgent` forecasts with `numpy.polyfit` + std-dev bands, not Prophet.
 
 ### LLM failure handling pattern
 

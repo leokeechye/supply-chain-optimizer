@@ -1,0 +1,6 @@
+id,name,country,lead_time_days,reliability_score,price_competitiveness,products,payment_terms,contact_email
+VENDOR-001,TechParts Manufacturing,China,14,0.88,0.85,SKU-001;SKU-003;SKU-007,Net 30,sales@techparts.example.com
+VENDOR-002,Euro Industrial Supplies,Germany,10,0.95,0.70,SKU-002;SKU-005;SKU-010,Net 45,orders@euroindustrial.example.com
+VENDOR-003,American Components Inc,USA,7,0.92,0.65,SKU-004;SKU-008;SKU-009,Net 30,supply@amcomp.example.com
+VENDOR-004,Asia Pacific Trading,Singapore,12,0.85,0.90,SKU-001;SKU-006;SKU-007,Net 60,orders@aptrade.example.com
+VENDOR-005,Precision Parts Ltd,Japan,15,0.97,0.60,SKU-002;SKU-004;SKU-005,Net 30,sales@precisionparts.example.com

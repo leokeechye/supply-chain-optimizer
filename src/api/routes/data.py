@@ -15,14 +15,13 @@ State is in-memory only — see src/data/store.py for the persistence caveat.
 
 import csv
 import io
-from collections import defaultdict
 from typing import Any, Callable
 
 import structlog
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import PlainTextResponse
 
-from src.data import store
+from src.data import db
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -183,9 +182,18 @@ def _parse_csv(content: bytes, entity: str) -> list[dict]:
 
 # --- Endpoints -------------------------------------------------------------
 
+_WRITERS: dict[str, Callable[[list[dict]], int]] = {
+    "skus":       db.replace_skus,
+    "warehouses": db.replace_warehouses,
+    "inventory":  db.replace_inventory,
+    "sales":      db.replace_sales,
+    "vendors":    db.replace_vendors,
+}
+
+
 @router.post("/upload/{entity}")
 async def upload_entity(entity: str, file: UploadFile = File(...)) -> dict:
-    """Upload a CSV for one entity. Replaces any previous override."""
+    """Upload a CSV for one entity. Replaces every row in that table."""
     if entity not in _SCHEMAS:
         raise HTTPException(status_code=404, detail=f"Unknown entity '{entity}'. Allowed: {list(_SCHEMAS)}")
 
@@ -193,15 +201,8 @@ async def upload_entity(entity: str, file: UploadFile = File(...)) -> dict:
     rows = _parse_csv(content, entity)
     logger.info("Data upload", entity=entity, row_count=len(rows), filename=file.filename)
 
-    if entity == "sales":
-        grouped: dict[str, list[dict]] = defaultdict(list)
-        for r in rows:
-            grouped[r["sku"]].append(r)
-        store.set_sales_override(dict(grouped))
-        return {"entity": "sales", "rows_loaded": len(rows), "skus_with_history": list(grouped.keys())}
-
-    store.set_override(entity, rows)
-    return {"entity": entity, "rows_loaded": len(rows)}
+    written = _WRITERS[entity](rows)
+    return {"entity": entity, "rows_loaded": written, "persisted": "sqlite"}
 
 
 @router.get("/template/{entity}", response_class=PlainTextResponse)
@@ -225,22 +226,12 @@ async def download_template(entity: str) -> PlainTextResponse:
 
 @router.get("/status")
 async def get_status() -> dict:
-    """Show which entities have been overridden by uploads."""
-    return store.status()
+    """Row counts for every persisted table."""
+    return db.status()
 
 
 @router.post("/reset")
 async def reset_all() -> dict:
-    """Drop every override and fall back to sample data for all entities."""
-    store.reset_all()
-    return {"reset": "all", "status": store.status()}
-
-
-@router.post("/reset/{entity}")
-async def reset_one(entity: str) -> dict:
-    """Drop the override for one entity."""
-    try:
-        store.reset_entity(entity)
-    except KeyError:
-        raise HTTPException(status_code=404, detail=f"Unknown entity '{entity}'")
-    return {"reset": entity, "status": store.status()}
+    """Drop every table and reseed from the bundled CSVs."""
+    db.reset_to_seeds()
+    return {"reset": "all", "status": db.status()}

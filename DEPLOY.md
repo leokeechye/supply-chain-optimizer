@@ -47,6 +47,25 @@ Railway gives you a `*.up.railway.app` URL. Sanity-check these paths:
 | `/ui/orchestrate.html` | The flagship dashboard |
 | `POST /api/v1/orchestrate/disruption` | LLM workflow, 30–60 s |
 
+## 4b. Persisting the SQLite database (IMPORTANT)
+
+Data (SKUs, warehouses, inventory, 1 year of sales history, vendors) lives in
+a SQLite file at `./data/supply_chain.db`. On first boot the app creates the
+schema and seeds it from `src/data/csv/*.csv`. CSV uploads via
+`/api/v1/data/upload/{entity}` write through to this DB.
+
+**Without a Volume, the DB file lives in ephemeral container storage and is
+wiped on every redeploy** — the seed data reappears (it reseeds from the CSVs),
+but any uploads are lost. To keep uploads across deploys:
+
+1. Railway → service → **Settings → Volumes → Add Volume**.
+2. Mount path: `/app/data` (the container's working dir is `/app`, so this maps
+   to `./data`).
+3. Redeploy. The SQLite file now persists on the volume.
+
+No env var change is needed — the default path resolves to `./data/supply_chain.db`.
+To put the DB elsewhere, set `SQLITE_PATH=/app/data/supply_chain.db` explicitly.
+
 ## 5. Promoting to a custom domain
 
 Railway → Settings → Networking → "Generate Domain" gives a railway.app

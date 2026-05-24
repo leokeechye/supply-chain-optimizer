@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from src.api.router import router as api_router
 from src.config import get_settings
+from src.data import db as data_db
 
 # Configure structured logging
 structlog.configure(
@@ -45,11 +46,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app_name=settings.app_name,
         environment=settings.app_env,
     )
-    
-    # Initialize connections, load models, etc.
-    # await initialize_database()
-    # await initialize_forecasting_models()
-    
+
+    # SQLite schema + first-boot seed from src/data/csv/*.csv
+    data_db.init_db()
+    logger.info("Database ready", **data_db.status())
+
     yield
     
     # Cleanup

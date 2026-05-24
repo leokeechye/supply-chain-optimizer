@@ -1,0 +1,5 @@
+id,name,location,capacity_sqm,used_sqm,region
+WH-US-EAST,East Coast Distribution Center,"Newark, NJ, USA",50000,42000,us-east
+WH-US-WEST,West Coast Distribution Center,"Los Angeles, CA, USA",45000,38500,us-west
+WH-EU-CENTRAL,Central Europe Hub,"Rotterdam, Netherlands",35000,28000,eu-central
+WH-ASIA-PACIFIC,Asia Pacific Hub,Singapore,40000,36000,apac
